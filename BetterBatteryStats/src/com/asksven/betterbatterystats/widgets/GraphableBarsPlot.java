@@ -21,6 +21,7 @@ import com.asksven.betterbatterystats.R;
 import com.asksven.betterbatterystats.data.Datapoint;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.util.AttributeSet;
@@ -32,9 +33,11 @@ import android.widget.ImageView;
 public class GraphableBarsPlot extends ImageView
 {
 	private static final String TAG = "GraphableBarsPlot";
-	private Context m_context;
+	private final Canvas sCanvas;
 
-	private static final int STROKE_WIDTH = 2;
+    private static final int STROKE_WIDTH = 2;
+
+	private Bitmap sBitmap;
 
 	static Paint sPaint = new Paint();
 	static
@@ -62,8 +65,22 @@ public class GraphableBarsPlot extends ImageView
 	public GraphableBarsPlot(Context context, AttributeSet attrs)
 	{
 		super(context, attrs);
-		m_context = context;
-		sPaint.setColor(m_context.getResources().getColor(R.color.peterriver));
+		sPaint.setColor(context.getResources().getColor(R.color.peterriver));
+		sCanvas = new Canvas();
+	}
+
+	@Override
+	protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+		super.onSizeChanged(w, h, oldw, oldh);
+		newBitmap();
+	}
+
+	private void newBitmap() {
+		Bitmap oldBitmap;
+		oldBitmap = sBitmap;
+		sBitmap = Bitmap.createBitmap(getWidth(), getHeight(), Bitmap.Config.ARGB_8888);
+		if (oldBitmap != null)
+			oldBitmap.recycle();
 	}
 
 	public void setValues(ArrayList<Datapoint> values)
@@ -94,9 +111,53 @@ public class GraphableBarsPlot extends ImageView
 				mMaxY = values.get(i).mY;
 			}
 		}
-		// we must force onDraw by invalidating the View (see
-		// http://wing-linux.sourceforge.net/guide/topics/graphics/index.html)
-		this.invalidate();
+		drawBars();
+	}
+
+	private void drawBars() {
+		int xmin = getPaddingLeft();
+		int xmax = getWidth() - getPaddingRight();
+		int ymin = 0;
+		int ymax = getHeight();
+
+
+		// draw bg
+		//sCanvas.drawRect(getPaddingLeft(), 0, xmax, getHeight(), sBackground);
+		long rangeX = ( mMaxX - mMinX );
+		long rangeY = ( mMaxY - mMinY );
+
+		float prevX = -1;
+		float prevY = -1;
+		for (int i = 0; i < mValues.size(); i++)
+		{
+			//Log.i(TAG, "Rendering value [" + i + "]: x=" + mValues.get(i).mX + ", y=" + mValues.get(i).mY);
+			float ratioX = (float)( mValues.get(i).mX - mMinX ) / rangeX;
+			float ratioY = (float)( mValues.get(i).mY - mMinY ) / rangeY;
+			//Log.i(TAG, "Ratio values [" + i + "]: rX=" + ratioX + ", rY=" + ratioY);
+			float posX = (ratioX * (xmax - xmin)) + xmin;
+			float posY = (ratioY * (ymax - ymin)) + ymin;
+			//Log.i(TAG, "Translated to posX=" + posX + ", posY=" + posY);
+			//sCanvas.drawCircle(posX, ymax - posY, 2, sPaint); //Line(posX, ymax, posX, ymax - posY, sPaint);
+			if ((prevX != -1) && (prevY != -1))
+			{
+				// connect dots
+				sCanvas.drawLine(prevX, ymax - prevY, posX, ymax - posY, sPaint);
+				//--
+//        		Path wallpath = new Path();
+//        		wallpath.reset(); // only needed when reusing this path for a new build
+//        		wallpath.moveTo(prevX, ymax - prevY); // used for first point
+//        		wallpath.lineTo(posX, ymax - posY);
+//        		wallpath.lineTo(posX, ymax);
+//        		wallpath.lineTo(prevX, ymax);
+//        		wallpath.lineTo(prevX, ymax - prevY); // there is a setLastPoint action but i found it not to work as expected
+//
+//        		sCanvas.drawPath(wallpath, sPaint);
+				//--
+			}
+			prevX = posX;
+			prevY = posY;
+			//sCanvas.drawLine(posX, ymax, posX, ymax - posY, sPaint);
+		}
 	}
 
 	@Override
@@ -137,50 +198,7 @@ public class GraphableBarsPlot extends ImageView
 //    	}
 //        Log.d(TAG, "onDraw: w = " + getWidth() + ", h = " + getHeight());
         
-        int xmin = getPaddingLeft();
-        int xmax = getWidth() - getPaddingRight();
-        int ymin = 0;
-        int ymax = getHeight();
-
-        
-        // draw bg
-        //canvas.drawRect(getPaddingLeft(), 0, xmax, getHeight(), sBackground);
-        long rangeX = ( mMaxX - mMinX );
-        long rangeY = ( mMaxY - mMinY );
-        
-        float prevX = -1;
-        float prevY = -1;
-        for (int i = 0; i < mValues.size(); i++)
-        {
-        	//Log.i(TAG, "Rendering value [" + i + "]: x=" + mValues.get(i).mX + ", y=" + mValues.get(i).mY);
-        	float ratioX = (float)( mValues.get(i).mX - mMinX ) / rangeX;
-        	float ratioY = (float)( mValues.get(i).mY - mMinY ) / rangeY;
-        	//Log.i(TAG, "Ratio values [" + i + "]: rX=" + ratioX + ", rY=" + ratioY);
-        	float posX = (ratioX * (xmax - xmin)) + xmin;
-        	float posY = (ratioY * (ymax - ymin)) + ymin;
-        	//Log.i(TAG, "Translated to posX=" + posX + ", posY=" + posY);
-        	//canvas.drawCircle(posX, ymax - posY, 2, sPaint); //Line(posX, ymax, posX, ymax - posY, sPaint);
-        	if ((prevY != -1) && (prevY != -1))
-        	{
-        		// connect dots
-        		canvas.drawLine(prevX, ymax - prevY, posX, ymax - posY, sPaint);
-        		//--
-//        		Path wallpath = new Path();
-//        		wallpath.reset(); // only needed when reusing this path for a new build
-//        		wallpath.moveTo(prevX, ymax - prevY); // used for first point
-//        		wallpath.lineTo(posX, ymax - posY);
-//        		wallpath.lineTo(posX, ymax);
-//        		wallpath.lineTo(prevX, ymax);
-//        		wallpath.lineTo(prevX, ymax - prevY); // there is a setLastPoint action but i found it not to work as expected
-//
-//        		canvas.drawPath(wallpath, sPaint);
-        		//--
-        	}
-        	prevX = posX;
-        	prevY = posY;
-            //canvas.drawLine(posX, ymax, posX, ymax - posY, sPaint);
-        }
-        
+        canvas.drawBitmap(sBitmap, 0, 0, sPaint);
         super.onDraw(canvas);
     }
 }
