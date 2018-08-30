@@ -15,3 +15,10 @@
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
+
+-dontwarn org.codehaus.jackson.**
+
+# Keep attributes for jackson
+-keepattributes JsonProperty, SerializedName
+
+-dontwarn net.hockeyapp.android.utils.*
