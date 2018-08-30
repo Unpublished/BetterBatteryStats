@@ -20,9 +20,9 @@ jobs:
       - run:
           name: Decrypt env vars
           command: ./circleciscripts/decrypt_env_vars.sh
-      - run:
-          name: Make env vars available
-          command: cat secret-env-plain >> $BASH_ENV
+      #- run:
+      #    name: Make env vars available
+      #    command: cat secret-env-plain >> $BASH_ENV
       - run:
           name: Download keystore
           command: ./circleciscripts/download_keystore.sh
@@ -111,9 +111,9 @@ jobs:
       - run:
           name: Decrypt env vars
           command: ./circleciscripts/decrypt_env_vars.sh
-      - run:
-          name: Make env vars available
-          command: cat secret-env-plain >> $BASH_ENV
+      #- run:
+      #    name: Make env vars available
+      #    command: cat secret-env-plain >> $BASH_ENV
       - run:
           name: Download keystore
           command: ./circleciscripts/download_keystore.sh
@@ -132,30 +132,3 @@ workflows:
       - test:
           requires:
             - build
-      - deploy-hockeyapp: # never for branches
-          requires:
-            - test
-          filters:
-            branches:
-              only:
-                - master
-
-      - hold: # requires manual approval, never for branches
-          type: approval
-          requires:
-            - test
-          filters:
-            branches:
-              only:
-                - master
-
-      - deploy-gplay: # when manual approval and never for branches
-          requires:
-            - hold
-          filters:
-#            tags:
-#              only: /^release.*/
-            branches:
-              only:
-                - master
-
